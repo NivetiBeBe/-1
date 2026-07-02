@@ -1,0 +1,115 @@
+package com.example.shoppinglist.ui.components
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.example.shoppinglist.domain.model.ItemCategory
+
+@Composable
+fun AddItemDialog(
+    itemName: String,
+    onItemNameChange: (String) -> Unit,
+    quantity: String,
+    onQuantityChange: (String) -> Unit,
+    selectedCategory: ItemCategory,
+    onCategorySelected: (ItemCategory) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    isEditing: Boolean = false
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = if (isEditing) "Редактировать" else "Новый товар",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                OutlinedTextField(
+                    value = itemName,
+                    onValueChange = onItemNameChange,
+                    label = { Text("Название") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                )
+
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = onQuantityChange,
+                    label = { Text("Количество") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                )
+
+                Text(
+                    text = "Категория",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.height(160.dp)
+                ) {
+                    items(ItemCategory.entries.toList()) { category ->
+                        FilterChip(
+                            selected = category == selectedCategory,
+                            onClick = { onCategorySelected(category) },
+                            label = { Text(category.displayName) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Отмена")
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = itemName.isNotBlank()
+                    ) {
+                        Text("Сохранить")
+                    }
+                }
+            }
+        }
+    }
+}

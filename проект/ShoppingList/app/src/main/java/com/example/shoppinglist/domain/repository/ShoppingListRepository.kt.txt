@@ -1,0 +1,13 @@
+package com.example.shoppinglist.domain.repository
+
+import com.example.shoppinglist.domain.model.ShoppingItem
+import kotlinx.coroutines.flow.Flow
+
+interface ShoppingListRepository {
+    fun getItems(): Flow<List<ShoppingItem>>
+    suspend fun addItem(item: ShoppingItem)
+    suspend fun removeItem(itemId: String)
+    suspend fun updateItem(item: ShoppingItem)
+    suspend fun toggleItemChecked(itemId: String)
+    suspend fun clearCheckedItems()
+}

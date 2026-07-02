@@ -1,0 +1,194 @@
+package com.example.shoppinglist.ui.screens
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.shoppinglist.ui.components.AddItemDialog
+import com.example.shoppinglist.ui.components.EmptyState
+import com.example.shoppinglist.ui.components.ShoppingItemCard
+import com.example.shoppinglist.ui.viewmodel.SettingsViewModel
+import com.example.shoppinglist.ui.viewmodel.ShoppingListViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShoppingListScreen(
+    viewModel: ShoppingListViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel()
+) {
+    val items by viewModel.items.collectAsStateWithLifecycle()
+    val checkedCount = items.count { it.isChecked }
+    val totalCount = items.size
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Список покупок")
+                        if (totalCount > 0) {
+                            Text(
+                                text = "$checkedCount из $totalCount куплено",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                actions = {
+                    // Theme toggle
+                    IconButton(onClick = settingsViewModel::toggleTheme) {
+                        Icon(
+                            imageVector = if (settingsViewModel.isDarkTheme)
+                                Icons.Default.LightMode
+                            else
+                                Icons.Default.DarkMode,
+                            contentDescription = "Toggle theme",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    // Clear checked
+                    AnimatedVisibility(
+                        visible = checkedCount > 0,
+                        enter = fadeIn() + slideInVertically(),
+                        exit = fadeOut() + slideOutVertically()
+                    ) {
+                        IconButton(onClick = viewModel::clearCheckedItems) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteSweep,
+                                contentDescription = "Clear checked",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = viewModel::showAddItemDialog,
+                icon = { Icon(Icons.Default.Add, null) },
+                text = { Text("Добавить") },
+                shape = RoundedCornerShape(16.dp),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (items.isEmpty()) {
+                EmptyState()
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Unchecked items first
+                    val uncheckedItems = items.filter { !it.isChecked }
+                    val checkedItems = items.filter { it.isChecked }
+
+                    if (uncheckedItems.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Осталось купить",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                            )
+                        }
+                        items(
+                            items = uncheckedItems,
+                            key = { it.id }
+                        ) { item ->
+                            ShoppingItemCard(
+                                item = item,
+                                onToggleChecked = { viewModel.toggleItemChecked(item.id) },
+                                onEdit = { viewModel.showEditItemDialog(item) },
+                                onDelete = { viewModel.removeItem(item.id) }
+                            )
+                        }
+                    }
+
+                    if (checkedItems.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Куплено",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                            )
+                        }
+                        items(
+                            items = checkedItems,
+                            key = { it.id }
+                        ) { item ->
+                            ShoppingItemCard(
+                                item = item,
+                                onToggleChecked = { viewModel.toggleItemChecked(item.id) },
+                                onEdit = { viewModel.showEditItemDialog(item) },
+                                onDelete = { viewModel.removeItem(item.id) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Add Dialog
+    if (viewModel.showAddDialog) {
+        AddItemDialog(
+            itemName = viewModel.newItemName,
+            onItemNameChange = viewModel::onNewItemNameChange,
+            quantity = viewModel.newItemQuantity,
+            onQuantityChange = viewModel::onNewItemQuantityChange,
+            selectedCategory = viewModel.selectedCategory,
+            onCategorySelected = viewModel::onCategorySelected,
+            onConfirm = viewModel::addItem,
+            onDismiss = viewModel::hideAddItemDialog
+        )
+    }
+
+    // Edit Dialog
+    if (viewModel.showEditDialog) {
+        AddItemDialog(
+            itemName = viewModel.newItemName,
+            onItemNameChange = viewModel::onNewItemNameChange,
+            quantity = viewModel.newItemQuantity,
+            onQuantityChange = viewModel::onNewItemQuantityChange,
+            selectedCategory = viewModel.selectedCategory,
+            onCategorySelected = viewModel::onCategorySelected,
+            onConfirm = viewModel::updateItem,
+            onDismiss = viewModel::hideEditItemDialog,
+            isEditing = true
+        )
+    }
+}
